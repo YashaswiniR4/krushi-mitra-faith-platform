@@ -12,12 +12,14 @@ import {
   Loader2, 
   CheckCircle2,
   AlertTriangle,
-  ThermometerSun,
   Leaf,
   FileText,
-  Info
+  Info,
+  Sprout,
+  FlaskConical
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { predictSoil, SoilAnalysis as SoilAnalysisType } from "@/lib/ai-services";
 
 const SoilAnalysis = () => {
   const [formData, setFormData] = useState({
@@ -26,16 +28,14 @@ const SoilAnalysis = () => {
     phosphorus: "",
     potassium: "",
     moisture: 50,
-    temperature: "",
+    organicMatter: "",
     soilType: "",
+    location: "",
+    cropType: "",
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<{
-    fertilityScore: number;
-    status: "poor" | "moderate" | "good" | "excellent";
-    recommendations: string[];
-    nutrients: { name: string; level: "low" | "optimal" | "high"; value: string }[];
-  } | null>(null);
+  const [result, setResult] = useState<SoilAnalysisType | null>(null);
+  const [modelUsed, setModelUsed] = useState<string>("");
   const { toast } = useToast();
 
   const handleChange = (field: string, value: string | number) => {
@@ -46,49 +46,72 @@ const SoilAnalysis = () => {
     e.preventDefault();
     setIsAnalyzing(true);
 
-    // Simulate analysis - will be replaced with actual API call
-    setTimeout(() => {
-      setResult({
-        fertilityScore: 72,
-        status: "good",
-        recommendations: [
-          "Add nitrogen-rich fertilizers to improve crop growth",
-          "Maintain current pH levels for optimal nutrient absorption",
-          "Consider adding organic matter to improve soil structure",
-          "Implement drip irrigation to optimize moisture levels",
-        ],
-        nutrients: [
-          { name: "Nitrogen (N)", level: "low", value: formData.nitrogen || "45 kg/ha" },
-          { name: "Phosphorus (P)", level: "optimal", value: formData.phosphorus || "28 kg/ha" },
-          { name: "Potassium (K)", level: "optimal", value: formData.potassium || "156 kg/ha" },
-          { name: "pH Level", level: "optimal", value: String(formData.ph) },
-          { name: "Moisture", level: formData.moisture < 40 ? "low" : formData.moisture > 70 ? "high" : "optimal", value: `${formData.moisture}%` },
-        ],
+    try {
+      const response = await predictSoil({
+        ph: formData.ph,
+        nitrogen: formData.nitrogen ? parseFloat(formData.nitrogen) : undefined,
+        phosphorus: formData.phosphorus ? parseFloat(formData.phosphorus) : undefined,
+        potassium: formData.potassium ? parseFloat(formData.potassium) : undefined,
+        moisture: formData.moisture,
+        organicMatter: formData.organicMatter ? parseFloat(formData.organicMatter) : undefined,
+        location: formData.location || undefined,
+        cropType: formData.cropType || undefined,
       });
-      setIsAnalyzing(false);
+
+      if (response.success && response.analysis) {
+        setResult(response.analysis);
+        setModelUsed(response.modelUsed || "AI Model");
+        toast({
+          title: "Analysis Complete",
+          description: `Soil fertility score: ${response.analysis.fertilityScore}/100`,
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: response.error || "Could not analyze soil data",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Analysis error:", error);
       toast({
-        title: "Analysis Complete",
-        description: "Soil fertility score: 72/100",
+        title: "Error",
+        description: "Failed to connect to AI service. Please try again.",
+        variant: "destructive",
       });
-    }, 2500);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "excellent": return "text-green-600 bg-green-100";
       case "good": return "text-blue-600 bg-blue-100";
-      case "moderate": return "text-amber-600 bg-amber-100";
+      case "average": return "text-amber-600 bg-amber-100";
+      case "below_average": return "text-orange-600 bg-orange-100";
       case "poor": return "text-red-600 bg-red-100";
       default: return "text-gray-600 bg-gray-100";
     }
   };
 
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case "optimal": return "text-green-600";
+  const getNutrientStatusColor = (status: string) => {
+    switch (status) {
+      case "adequate": return "text-green-600";
+      case "high": 
+      case "excess": return "text-blue-600";
       case "low": return "text-amber-600";
-      case "high": return "text-red-600";
+      case "deficient": return "text-red-600";
       default: return "text-gray-600";
+    }
+  };
+
+  const getFertilizerTypeColor = (type: string) => {
+    switch (type) {
+      case "organic": return "bg-green-100 text-green-700";
+      case "chemical": return "bg-blue-100 text-blue-700";
+      case "bio-fertilizer": return "bg-purple-100 text-purple-700";
+      default: return "bg-gray-100 text-gray-700";
     }
   };
 
@@ -104,7 +127,7 @@ const SoilAnalysis = () => {
           </Link>
           <div>
             <h1 className="text-xl font-serif font-bold text-foreground">Soil Analysis</h1>
-            <p className="text-sm text-muted-foreground">Enter soil test data for fertility assessment</p>
+            <p className="text-sm text-muted-foreground">AI-powered soil fertility assessment</p>
           </div>
         </div>
       </header>
@@ -136,24 +159,46 @@ const SoilAnalysis = () => {
                         <SelectItem value="silty">Silty</SelectItem>
                         <SelectItem value="peaty">Peaty</SelectItem>
                         <SelectItem value="chalky">Chalky</SelectItem>
+                        <SelectItem value="black">Black Soil</SelectItem>
+                        <SelectItem value="red">Red Soil</SelectItem>
+                        <SelectItem value="alluvial">Alluvial</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {/* Temperature */}
+                  {/* Location */}
                   <div className="space-y-2">
-                    <Label htmlFor="temperature">Soil Temperature (°C)</Label>
-                    <div className="relative">
-                      <ThermometerSun className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="temperature"
-                        type="number"
-                        placeholder="e.g., 25"
-                        value={formData.temperature}
-                        onChange={(e) => handleChange("temperature", e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
+                    <Label htmlFor="location">Location / Region</Label>
+                    <Input
+                      id="location"
+                      placeholder="e.g., Maharashtra, Punjab"
+                      value={formData.location}
+                      onChange={(e) => handleChange("location", e.target.value)}
+                    />
+                  </div>
+
+                  {/* Crop Type */}
+                  <div className="space-y-2">
+                    <Label htmlFor="cropType">Intended Crop</Label>
+                    <Input
+                      id="cropType"
+                      placeholder="e.g., Rice, Wheat, Cotton"
+                      value={formData.cropType}
+                      onChange={(e) => handleChange("cropType", e.target.value)}
+                    />
+                  </div>
+
+                  {/* Organic Matter */}
+                  <div className="space-y-2">
+                    <Label htmlFor="organicMatter">Organic Matter (%)</Label>
+                    <Input
+                      id="organicMatter"
+                      type="number"
+                      step="0.1"
+                      placeholder="e.g., 2.5"
+                      value={formData.organicMatter}
+                      onChange={(e) => handleChange("organicMatter", e.target.value)}
+                    />
                   </div>
                 </div>
 
@@ -232,7 +277,7 @@ const SoilAnalysis = () => {
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Analyzing Soil...
+                      Analyzing with AI...
                     </>
                   ) : (
                     <>
@@ -252,6 +297,9 @@ const SoilAnalysis = () => {
                 <CardTitle className="font-serif flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                   Analysis Results
+                  <span className="text-xs font-normal text-muted-foreground ml-auto">
+                    Model: {modelUsed}
+                  </span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -284,42 +332,125 @@ const SoilAnalysis = () => {
                       <span className="text-3xl font-serif font-bold">{result.fertilityScore}</span>
                     </div>
                   </div>
-                  <span className={`inline-block px-4 py-1 rounded-full text-sm font-medium ${getStatusColor(result.status)}`}>
-                    {result.status.toUpperCase()}
+                  <span className={`inline-block px-4 py-1 rounded-full text-sm font-medium ${getStatusColor(result.fertilityRating)}`}>
+                    {result.fertilityRating.replace('_', ' ').toUpperCase()}
                   </span>
                 </div>
 
+                {/* pH Analysis */}
+                {result.phAnalysis && (
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <h4 className="font-semibold text-foreground mb-2">pH Analysis</h4>
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Status:</strong> {result.phAnalysis.status.replace('_', ' ')}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {result.phAnalysis.recommendation}
+                    </p>
+                  </div>
+                )}
+
                 {/* Nutrient Levels */}
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-foreground">Nutrient Levels</h4>
-                  {result.nutrients.map((nutrient) => (
-                    <div key={nutrient.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <span className="text-foreground">{nutrient.name}</span>
+                  <h4 className="font-semibold text-foreground">Nutrient Analysis</h4>
+                  {Object.entries(result.nutrientAnalysis).map(([key, nutrient]) => (
+                    <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <span className="text-foreground capitalize">{key}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground">{nutrient.value}</span>
-                        <span className={`text-sm font-medium ${getLevelColor(nutrient.level)}`}>
-                          {nutrient.level.toUpperCase()}
+                        <span className={`text-sm font-medium ${getNutrientStatusColor(nutrient.status)}`}>
+                          {nutrient.status.toUpperCase()}
                         </span>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Recommendations */}
+                {/* Fertilizer Recommendations */}
                 <div className="p-4 rounded-lg border border-border bg-card">
                   <div className="flex items-center gap-2 mb-3">
-                    <Info className="w-5 h-5 text-primary" />
-                    <h4 className="font-semibold text-foreground">Recommendations</h4>
+                    <FlaskConical className="w-5 h-5 text-primary" />
+                    <h4 className="font-semibold text-foreground">Fertilizer Recommendations</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {result.fertilizerRecommendations.map((fert, index) => (
+                      <div key={index} className="p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-foreground">{fert.name}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${getFertilizerTypeColor(fert.type)}`}>
+                            {fert.type}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          <strong>Quantity:</strong> {fert.quantity}
+                        </p>
+                        {fert.applicationMethod && (
+                          <p className="text-sm text-muted-foreground">
+                            <strong>Method:</strong> {fert.applicationMethod}
+                          </p>
+                        )}
+                        {fert.timing && (
+                          <p className="text-sm text-muted-foreground">
+                            <strong>Timing:</strong> {fert.timing}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Soil Improvement Tips */}
+                <div className="p-4 rounded-lg border border-border bg-card">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sprout className="w-5 h-5 text-green-500" />
+                    <h4 className="font-semibold text-foreground">Soil Improvement Tips</h4>
                   </div>
                   <ul className="space-y-2">
-                    {result.recommendations.map((rec, index) => (
+                    {result.soilImprovementTips.map((tip, index) => (
                       <li key={index} className="flex items-start gap-2 text-muted-foreground">
                         <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0" />
-                        <span>{rec}</span>
+                        <span>{tip}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
+
+                {/* Suitable Crops */}
+                {result.suitableCrops && result.suitableCrops.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-sm font-medium text-foreground w-full mb-1">Suitable Crops:</span>
+                    {result.suitableCrops.map((crop, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                        {crop}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Warnings */}
+                {result.warnings && result.warnings.length > 0 && (
+                  <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-5 h-5 text-red-500" />
+                      <h4 className="font-semibold text-red-700">Warnings</h4>
+                    </div>
+                    <ul className="space-y-1">
+                      {result.warnings.map((warning, index) => (
+                        <li key={index} className="text-sm text-red-600">• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Additional Notes */}
+                {result.additionalNotes && (
+                  <div className="p-4 rounded-lg bg-muted">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="w-4 h-4 text-primary" />
+                      <h4 className="font-semibold text-foreground text-sm">Additional Notes</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{result.additionalNotes}</p>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-4">
