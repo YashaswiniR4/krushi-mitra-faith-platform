@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   ArrowLeft, 
   Upload, 
@@ -11,19 +13,19 @@ import {
   CheckCircle2,
   Leaf,
   Info,
-  FileText
+  FileText,
+  ShieldCheck
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { predictDisease, fileToBase64, DiseaseDiagnosis } from "@/lib/ai-services";
 
 const ScanCrop = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [cropType, setCropType] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<{
-    disease: string;
-    confidence: number;
-    recommendation: string;
-    severity: "low" | "medium" | "high";
-  } | null>(null);
+  const [result, setResult] = useState<DiseaseDiagnosis | null>(null);
+  const [modelUsed, setModelUsed] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -38,6 +40,7 @@ const ScanCrop = () => {
         });
         return;
       }
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = () => {
         setSelectedImage(reader.result as string);
@@ -48,32 +51,59 @@ const ScanCrop = () => {
   };
 
   const handleAnalyze = async () => {
-    if (!selectedImage) return;
+    if (!selectedFile) return;
 
     setIsAnalyzing(true);
 
-    // Simulate AI analysis - will be replaced with actual API call
-    setTimeout(() => {
-      setResult({
-        disease: "Bacterial Leaf Blight",
-        confidence: 92,
-        recommendation: "Apply copper-based fungicide. Remove and destroy infected leaves. Ensure proper drainage and avoid overhead irrigation. Consider resistant varieties for next season.",
-        severity: "medium",
-      });
-      setIsAnalyzing(false);
+    try {
+      const base64 = await fileToBase64(selectedFile);
+      const response = await predictDisease(base64, cropType || undefined);
+
+      if (response.success && response.diagnosis) {
+        setResult(response.diagnosis);
+        setModelUsed(response.modelUsed || "AI Model");
+        toast({
+          title: "Analysis Complete",
+          description: response.diagnosis.isHealthy 
+            ? "Your crop appears healthy!" 
+            : `Disease detected: ${response.diagnosis.diseaseName}`,
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: response.error || "Could not analyze the image",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Analysis error:", error);
       toast({
-        title: "Analysis Complete",
-        description: "Disease detected with 92% confidence",
+        title: "Error",
+        description: "Failed to connect to AI service. Please try again.",
+        variant: "destructive",
       });
-    }, 3000);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case "low": return "bg-green-100 text-green-700";
-      case "medium": return "bg-amber-100 text-amber-700";
-      case "high": return "bg-red-100 text-red-700";
+      case "none": return "bg-green-100 text-green-700";
+      case "mild": return "bg-yellow-100 text-yellow-700";
+      case "moderate": return "bg-amber-100 text-amber-700";
+      case "severe": return "bg-red-100 text-red-700";
       default: return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const getSeverityIcon = (severity: string) => {
+    switch (severity) {
+      case "none": return <CheckCircle2 className="w-6 h-6 text-green-600" />;
+      case "mild": return <AlertTriangle className="w-6 h-6 text-yellow-600" />;
+      case "moderate": return <AlertTriangle className="w-6 h-6 text-amber-600" />;
+      case "severe": return <AlertTriangle className="w-6 h-6 text-red-600" />;
+      default: return <Info className="w-6 h-6 text-gray-600" />;
     }
   };
 
@@ -89,7 +119,7 @@ const ScanCrop = () => {
           </Link>
           <div>
             <h1 className="text-xl font-serif font-bold text-foreground">Crop Disease Scanner</h1>
-            <p className="text-sm text-muted-foreground">Upload an image for AI analysis</p>
+            <p className="text-sm text-muted-foreground">AI-powered disease detection using vision models</p>
           </div>
         </div>
       </header>
@@ -104,7 +134,21 @@ const ScanCrop = () => {
                 Upload Crop Image
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Crop Type Input */}
+              <div className="space-y-2">
+                <Label htmlFor="cropType">Crop Type (optional)</Label>
+                <Input
+                  id="cropType"
+                  placeholder="e.g., Rice, Wheat, Tomato, Cotton"
+                  value={cropType}
+                  onChange={(e) => setCropType(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Specifying the crop type helps improve detection accuracy
+                </p>
+              </div>
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -142,6 +186,7 @@ const ScanCrop = () => {
                       variant="outline"
                       onClick={() => {
                         setSelectedImage(null);
+                        setSelectedFile(null);
                         setResult(null);
                       }}
                     >
@@ -155,7 +200,7 @@ const ScanCrop = () => {
                       {isAnalyzing ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Analyzing...
+                          Analyzing with AI...
                         </>
                       ) : (
                         <>
@@ -175,20 +220,26 @@ const ScanCrop = () => {
             <Card className="card-elevated animate-slide-up">
               <CardHeader>
                 <CardTitle className="font-serif flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  {result.isHealthy ? (
+                    <ShieldCheck className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  )}
                   Analysis Results
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Disease Info */}
                 <div className="flex items-start gap-4 p-4 rounded-lg bg-muted">
-                  <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <AlertTriangle className="w-6 h-6 text-amber-600" />
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    result.isHealthy ? 'bg-green-100' : 'bg-amber-100'
+                  }`}>
+                    {getSeverityIcon(result.severity)}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h3 className="font-serif font-bold text-lg text-foreground">
-                        {result.disease}
+                        {result.diseaseName}
                       </h3>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(result.severity)}`}>
                         {result.severity.toUpperCase()} Severity
@@ -197,19 +248,86 @@ const ScanCrop = () => {
                     <p className="text-muted-foreground">
                       Detected with <strong className="text-foreground">{result.confidence}%</strong> confidence
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Model: {modelUsed}
+                    </p>
                   </div>
                 </div>
 
-                {/* Recommendation */}
+                {/* Symptoms */}
+                {result.symptoms && result.symptoms.length > 0 && (
+                  <div className="p-4 rounded-lg border border-border bg-card">
+                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      Observed Symptoms
+                    </h4>
+                    <ul className="space-y-1">
+                      {result.symptoms.map((symptom, index) => (
+                        <li key={index} className="text-muted-foreground text-sm flex items-start gap-2">
+                          <span className="text-amber-500">•</span>
+                          {symptom}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Affected Parts */}
+                {result.affectedParts && result.affectedParts.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-sm font-medium text-foreground">Affected Parts:</span>
+                    {result.affectedParts.map((part, index) => (
+                      <span key={index} className="px-2 py-1 bg-muted rounded text-sm text-muted-foreground">
+                        {part}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Treatment Recommendations */}
                 <div className="p-4 rounded-lg border border-border bg-card">
                   <div className="flex items-center gap-2 mb-3">
-                    <Info className="w-5 h-5 text-primary" />
-                    <h4 className="font-semibold text-foreground">Recommendations</h4>
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    <h4 className="font-semibold text-foreground">Treatment Recommendations</h4>
                   </div>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {result.recommendation}
-                  </p>
+                  <ul className="space-y-2">
+                    {result.treatmentRecommendations.map((rec, index) => (
+                      <li key={index} className="flex items-start gap-2 text-muted-foreground">
+                        <span className="text-green-500 font-bold">{index + 1}.</span>
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+
+                {/* Preventive Measures */}
+                {result.preventiveMeasures && result.preventiveMeasures.length > 0 && (
+                  <div className="p-4 rounded-lg border border-border bg-card">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck className="w-5 h-5 text-blue-500" />
+                      <h4 className="font-semibold text-foreground">Preventive Measures</h4>
+                    </div>
+                    <ul className="space-y-2">
+                      {result.preventiveMeasures.map((measure, index) => (
+                        <li key={index} className="flex items-start gap-2 text-muted-foreground">
+                          <span className="text-blue-500">•</span>
+                          {measure}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Additional Notes */}
+                {result.additionalNotes && (
+                  <div className="p-4 rounded-lg bg-muted">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="w-4 h-4 text-primary" />
+                      <h4 className="font-semibold text-foreground text-sm">Additional Notes</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{result.additionalNotes}</p>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-4">

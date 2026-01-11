@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ScanCrop from "./pages/ScanCrop";
 import SoilAnalysis from "./pages/SoilAnalysis";
+import YieldPrediction from "./pages/YieldPrediction";
 import Reports from "./pages/Reports";
 import ReportView from "./pages/ReportView";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/scan" element={<ScanCrop />} />
           <Route path="/dashboard/soil" element={<SoilAnalysis />} />
+          <Route path="/dashboard/yield" element={<YieldPrediction />} />
           <Route path="/dashboard/reports" element={<Reports />} />
           <Route path="/report/:id" element={<ReportView />} />
           <Route path="*" element={<NotFound />} />
