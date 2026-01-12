@@ -90,6 +90,8 @@ git clone https://github.com/YashaswiniR4/krushi-mitra-faith-platform.git
 cd krushi-mitra-faith-platform
 npm install
 npm run dev
+
+
 🌱 Impact
 Krushi Mitra helps farmers:
 Detect diseases early
