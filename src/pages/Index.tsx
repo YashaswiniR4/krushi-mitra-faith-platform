@@ -5,9 +5,6 @@ import ServicesSection from "@/components/home/ServicesSection";
 import MissionSection from "@/components/home/MissionSection";
 import StatsSection from "@/components/home/StatsSection";
 import CTASection from "@/components/home/CTASection";
-import WeatherWidget from "@/components/home/WeatherWidget";
-import FeaturesGrid from "@/components/home/FeaturesGrid";
-import TestimonialsSection from "@/components/home/TestimonialsSection";
 
 const Index = () => {
   return (
@@ -16,10 +13,7 @@ const Index = () => {
       <main>
         <HeroSection />
         <ServicesSection />
-        <WeatherWidget />
-        <FeaturesGrid />
         <MissionSection />
-        <TestimonialsSection />
         <StatsSection />
         <CTASection />
       </main>
