@@ -1,12 +1,18 @@
 🌾 Krushi Mitra – AI-Powered Smart Agriculture Platform
+
 Faith-Driven • Farmer-Focused • Data-Secure
+
 🌍 Live Application
 Access the platform here:
 👉 https://krushi-mitra-faith-platform.netlify.app
+
 This live system allows users to log in, upload crop images, view AI predictions, and generate agricultural reports.
+
 📌 Project Overview
+
 Krushi Mitra is a full-stack web platform that uses Artificial Intelligence and cloud technology to support farmers in making better agricultural decisions. The system provides tools for crop disease detection, soil health analysis, and digital farm record keeping in a secure and easy-to-use interface.
 The platform is designed to be used by farmers, field officers, and agricultural institutions for reliable and transparent crop analysis.
+
 🎯 Objectives
 Detect crop diseases from images
 Predict soil fertility and health
@@ -14,6 +20,7 @@ Provide intelligent crop recommendations
 Store farmer and farm records digitally
 Generate official printable agricultural reports
 Ensure data security and integrity
+
 🚀 Key Features
 👨‍🌾 Farmer Dashboard
 Secure login & registration
@@ -23,16 +30,19 @@ Enter soil data for fertility analysis
 View AI predictions with confidence scores
 Access history of previous scans
 Download PDF-ready agricultural reports
+
 🧑‍💼 Admin Panel
 View all farmer activity
 Monitor AI predictions
 Verify reports
 Maintain data integrity
+
 🧠 AI Capabilities
 Crop Disease Detection using Convolutional Neural Networks
 Soil Fertility Prediction using Machine Learning
 Yield & Crop Advisory System
 Confidence scores for every prediction
+
 🛠 Technology Stack
 Layer
 Technology
@@ -50,6 +60,7 @@ Reports
 HTML → PDF Generator
 Deployment
 Netlify
+
 🗂 Database Structure
 Copy code
 
@@ -61,6 +72,7 @@ ai_predictions
 reports
 audit_logs
 All records are secure, traceable, and tamper-proof.
+
 📄 Reports
 Each farmer can generate an official digital agriculture report that contains:
 Farmer & farm details
@@ -70,6 +82,7 @@ AI confidence score
 Recommendations
 Date and verification
 These reports can be downloaded and shared with agriculture officers or institutions.
+
 🔐 Security
 Supabase Authentication
 Row-level database security
@@ -83,6 +96,7 @@ Upload a crop image
 View the AI prediction
 Check the scan history
 Download the report
+
 ⚙️ Local Setup
 Copy code
 Bash
