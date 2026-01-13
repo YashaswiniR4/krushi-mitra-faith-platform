@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sprout, Mail, Lock, User, Phone, MapPin, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import heroImage from "@/assets/hero-farming.jpg";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -54,23 +55,30 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted flex items-center justify-center p-4 py-8">
-      {/* Background Pattern */}
-      <div className="fixed inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjMUI0MzMyIiBzdHJva2Utb3BhY2l0eT0iLjA1IiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] opacity-50" />
+    <div className="min-h-screen flex items-center justify-center p-4 py-8 relative overflow-hidden">
+      {/* Background Image with Overlay */}
+      <div className="absolute inset-0">
+        <img
+          src={heroImage}
+          alt="Indian farmers in lush green fields"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/70 to-primary/50" />
+      </div>
       
-      <div className="relative w-full max-w-lg">
+      <div className="relative w-full max-w-lg z-10">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-soft">
-            <Sprout className="w-7 h-7 text-primary-foreground" />
+          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-soft border border-white/30">
+            <Sprout className="w-7 h-7 text-white" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-serif font-bold text-foreground">Krushi Mitra</span>
-            <span className="text-xs text-muted-foreground">AI Smart Farming</span>
+            <span className="text-xl font-serif font-bold text-white">Krushi Mitra</span>
+            <span className="text-xs text-white/80">AI Smart Farming</span>
           </div>
         </Link>
 
-        <Card className="card-elevated animate-scale-in">
+        <Card className="card-elevated animate-scale-in backdrop-blur-sm bg-card/95">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-2xl font-serif">Create Account</CardTitle>
             <CardDescription>
@@ -227,11 +235,11 @@ const Register = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-xs text-white/70 mt-6">
           By registering, you agree to our{" "}
-          <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
+          <Link to="/terms" className="text-harvest hover:underline">Terms of Service</Link>
           {" "}and{" "}
-          <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+          <Link to="/privacy" className="text-harvest hover:underline">Privacy Policy</Link>
         </p>
       </div>
     </div>
