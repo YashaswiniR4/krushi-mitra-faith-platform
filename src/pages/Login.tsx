@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sprout, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import heroImage from "@/assets/hero-farming.jpg";
 
 const Login = () => {
@@ -14,21 +15,34 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const { signIn } = useAuth();
+
+  // Get the redirect path from state, or default to dashboard
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/dashboard";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login - will be replaced with actual auth
-    setTimeout(() => {
+    const { error } = await signIn(email, password);
+
+    if (error) {
       setIsLoading(false);
       toast({
-        title: "Welcome back!",
-        description: "Redirecting to your dashboard...",
+        title: "Sign in failed",
+        description: error.message,
+        variant: "destructive",
       });
-      navigate("/dashboard");
-    }, 1500);
+      return;
+    }
+
+    toast({
+      title: "Welcome back!",
+      description: "Redirecting to your dashboard...",
+    });
+    navigate(from, { replace: true });
   };
 
   return (
@@ -42,7 +56,7 @@ const Login = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/70 to-primary/50" />
       </div>
-      
+
       <div className="relative w-full max-w-md z-10">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-3 mb-8">
