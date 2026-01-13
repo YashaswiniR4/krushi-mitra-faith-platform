@@ -1,7 +1,14 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Sprout, 
   Home, 
@@ -21,6 +28,7 @@ import {
   AlertTriangle,
   CheckCircle2
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const DashboardSidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const menuItems = [
@@ -77,10 +85,13 @@ const DashboardSidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
           {/* Logout */}
           <div className="p-4 border-t border-sidebar-border">
-            <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/50 transition-colors">
+            <Link 
+              to="/login"
+              className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/50 transition-colors"
+            >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Sign Out</span>
-            </button>
+            </Link>
           </div>
         </div>
       </aside>
@@ -90,6 +101,22 @@ const DashboardSidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const notifications = [
+    { id: 1, title: "Crop scan completed", message: "Your wheat field scan is ready", time: "2 min ago" },
+    { id: 2, title: "New report available", message: "Monthly soil analysis report", time: "1 hour ago" },
+    { id: 3, title: "Weather alert", message: "Heavy rain expected tomorrow", time: "3 hours ago" },
+  ];
+
+  const handleSignOut = () => {
+    toast({
+      title: "Signed out",
+      description: "You have been signed out successfully.",
+    });
+    navigate("/login");
+  };
 
   const recentScans = [
     { id: 1, crop: "Rice", disease: "Bacterial Leaf Blight", confidence: 92, date: "Today", status: "warning" },
@@ -127,15 +154,63 @@ const Dashboard = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="relative p-2 rounded-lg hover:bg-muted">
-                <Bell className="w-5 h-5 text-muted-foreground" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-              </button>
-              <button className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-primary-foreground" />
-                </div>
-              </button>
+              {/* Notifications Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="relative p-2 rounded-lg hover:bg-muted">
+                    <Bell className="w-5 h-5 text-muted-foreground" />
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <div className="p-3 border-b">
+                    <h4 className="font-semibold text-sm">Notifications</h4>
+                  </div>
+                  {notifications.map((notification) => (
+                    <DropdownMenuItem key={notification.id} className="p-3 cursor-pointer">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-sm">{notification.title}</span>
+                        <span className="text-xs text-muted-foreground">{notification.message}</span>
+                        <span className="text-xs text-muted-foreground/70">{notification.time}</span>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="p-3 justify-center cursor-pointer">
+                    <span className="text-sm text-primary">View all notifications</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted">
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="p-3 border-b">
+                    <p className="font-medium text-sm">Farmer</p>
+                    <p className="text-xs text-muted-foreground">farmer@example.com</p>
+                  </div>
+                  <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="cursor-pointer">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/dashboard/reports")} className="cursor-pointer">
+                    <FileText className="w-4 h-4 mr-2" />
+                    My Reports
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
