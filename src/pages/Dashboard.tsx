@@ -29,8 +29,9 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
-const DashboardSidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+const DashboardSidebar = ({ isOpen, onClose, onSignOut }: { isOpen: boolean; onClose: () => void; onSignOut: () => void }) => {
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard", active: true },
     { icon: Camera, label: "Scan Crop", path: "/dashboard/scan" },
@@ -85,13 +86,13 @@ const DashboardSidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
           {/* Logout */}
           <div className="p-4 border-t border-sidebar-border">
-            <Link 
-              to="/login"
+            <button 
+              onClick={onSignOut}
               className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/50 transition-colors"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Sign Out</span>
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -103,6 +104,7 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile, signOut } = useAuth();
 
   const notifications = [
     { id: 1, title: "Crop scan completed", message: "Your wheat field scan is ready", time: "2 min ago" },
@@ -110,13 +112,16 @@ const Dashboard = () => {
     { id: 3, title: "Weather alert", message: "Heavy rain expected tomorrow", time: "3 hours ago" },
   ];
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    await signOut();
     toast({
       title: "Signed out",
       description: "You have been signed out successfully.",
     });
     navigate("/login");
   };
+
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "Farmer";
 
   const recentScans = [
     { id: 1, crop: "Rice", disease: "Bacterial Leaf Blight", confidence: 92, date: "Today", status: "warning" },
@@ -133,7 +138,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-muted">
-      <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onSignOut={handleSignOut} />
 
       {/* Main Content */}
       <div className="lg:ml-72">
@@ -149,7 +154,7 @@ const Dashboard = () => {
               </button>
               <div>
                 <h1 className="text-xl font-serif font-bold text-foreground">Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Welcome back, Farmer!</p>
+                <p className="text-sm text-muted-foreground">Welcome back, {displayName}!</p>
               </div>
             </div>
 
@@ -193,8 +198,8 @@ const Dashboard = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="p-3 border-b">
-                    <p className="font-medium text-sm">Farmer</p>
-                    <p className="text-xs text-muted-foreground">farmer@example.com</p>
+                    <p className="font-medium text-sm">{displayName}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                   <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="cursor-pointer">
                     <Settings className="w-4 h-4 mr-2" />

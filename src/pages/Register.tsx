@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sprout, Mail, Lock, User, Phone, MapPin, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/hero-farming.jpg";
 
 const Register = () => {
@@ -24,6 +26,7 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signUp } = useAuth();
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -41,17 +44,56 @@ const Register = () => {
       return;
     }
 
+    if (formData.password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate registration - will be replaced with actual auth
-    setTimeout(() => {
+    // Sign up with Supabase
+    const { error } = await signUp(formData.email, formData.password, {
+      full_name: formData.name,
+    });
+
+    if (error) {
+      setIsLoading(false);
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update profile with additional data
+    // Wait a moment for the trigger to create the profile
+    setTimeout(async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({
+            phone: formData.phone,
+            village: formData.village,
+            district: formData.district,
+            role: formData.role,
+          })
+          .eq("user_id", user.id);
+      }
+
       setIsLoading(false);
       toast({
         title: "Registration successful!",
         description: "Welcome to Krushi Mitra. Redirecting to dashboard...",
       });
       navigate("/dashboard");
-    }, 1500);
+    }, 1000);
   };
 
   return (
@@ -190,7 +232,7 @@ const Register = () => {
                       onChange={(e) => handleChange("password", e.target.value)}
                       className="pl-10"
                       required
-                      minLength={8}
+                      minLength={6}
                     />
                   </div>
                 </div>
@@ -207,7 +249,7 @@ const Register = () => {
                       onChange={(e) => handleChange("confirmPassword", e.target.value)}
                       className="pl-10 pr-10"
                       required
-                      minLength={8}
+                      minLength={6}
                     />
                     <button
                       type="button"
