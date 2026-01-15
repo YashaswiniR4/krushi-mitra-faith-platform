@@ -1,10 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Validation schema for disease prediction
+const DiseaseRequestSchema = z.object({
+  imageBase64: z.string()
+    .min(1, "Image data is required")
+    .max(15_000_000, "Image size exceeds maximum allowed (10MB)") // Base64 is ~33% larger than binary
+    .refine(
+      (str) => /^[A-Za-z0-9+/=]+$/.test(str),
+      "Invalid base64 format"
+    ),
+  cropType: z.string()
+    .max(100, "Crop type must be less than 100 characters")
+    .regex(/^[a-zA-Z\s\-]+$/, "Crop type contains invalid characters")
+    .optional(),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -35,14 +51,19 @@ serve(async (req) => {
       );
     }
 
-    const { imageBase64, cropType } = await req.json();
-
-    if (!imageBase64) {
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = DiseaseRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
       return new Response(
-        JSON.stringify({ error: 'Image data is required' }),
+        JSON.stringify({ error: 'Validation failed', details: errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { imageBase64, cropType } = validationResult.data;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -62,7 +83,9 @@ Your role is to analyze crop images and identify diseases with high accuracy. Yo
 If the plant appears healthy, indicate that with appropriate confidence.
 Be precise and practical in your recommendations, considering Indian farming practices.`;
 
-    const userPrompt = `Analyze this ${cropType || 'crop'} image for any diseases or health issues. Provide a comprehensive diagnosis.`;
+    // Sanitize cropType for use in prompt
+    const sanitizedCropType = cropType ? cropType.replace(/[^a-zA-Z\s\-]/g, '').slice(0, 50) : 'crop';
+    const userPrompt = `Analyze this ${sanitizedCropType} image for any diseases or health issues. Provide a comprehensive diagnosis.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

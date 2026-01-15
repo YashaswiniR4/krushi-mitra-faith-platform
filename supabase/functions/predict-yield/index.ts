@@ -1,10 +1,54 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Validation schema for yield prediction
+const YieldRequestSchema = z.object({
+  cropType: z.string()
+    .min(1, "Crop type is required")
+    .max(100, "Crop type must be less than 100 characters")
+    .regex(/^[a-zA-Z\s\-]+$/, "Crop type contains invalid characters"),
+  variety: z.string()
+    .max(100, "Variety must be less than 100 characters")
+    .regex(/^[a-zA-Z0-9\s\-]+$/, "Variety contains invalid characters")
+    .optional(),
+  farmSize: z.number()
+    .min(0.01, "Farm size must be greater than 0")
+    .max(10000, "Farm size exceeds reasonable range (max 10,000 acres)"),
+  soilType: z.string()
+    .max(100, "Soil type must be less than 100 characters")
+    .regex(/^[a-zA-Z\s\-]+$/, "Soil type contains invalid characters")
+    .optional(),
+  irrigationType: z.string()
+    .max(100, "Irrigation type must be less than 100 characters")
+    .regex(/^[a-zA-Z\s\-]+$/, "Irrigation type contains invalid characters")
+    .optional(),
+  fertilizersUsed: z.string()
+    .max(500, "Fertilizers description must be less than 500 characters")
+    .regex(/^[a-zA-Z0-9\s,.\-]+$/, "Fertilizers description contains invalid characters")
+    .optional(),
+  sowingDate: z.string()
+    .max(50, "Sowing date must be less than 50 characters")
+    .regex(/^[a-zA-Z0-9\s,.\-\/]+$/, "Sowing date contains invalid characters")
+    .optional(),
+  location: z.string()
+    .max(200, "Location must be less than 200 characters")
+    .regex(/^[a-zA-Z0-9\s,.\-]+$/, "Location contains invalid characters")
+    .optional(),
+  previousYield: z.number()
+    .min(0, "Previous yield cannot be negative")
+    .max(100000, "Previous yield exceeds reasonable range")
+    .optional(),
+  weatherConditions: z.string()
+    .max(200, "Weather conditions must be less than 200 characters")
+    .regex(/^[a-zA-Z0-9\s,.\-]+$/, "Weather conditions contains invalid characters")
+    .optional(),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -35,6 +79,18 @@ serve(async (req) => {
       );
     }
 
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = YieldRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+      return new Response(
+        JSON.stringify({ error: 'Validation failed', details: errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { 
       cropType, 
       variety,
@@ -46,14 +102,7 @@ serve(async (req) => {
       location,
       previousYield,
       weatherConditions 
-    } = await req.json();
-
-    if (!cropType || !farmSize) {
-      return new Response(
-        JSON.stringify({ error: 'Crop type and farm size are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    } = validationResult.data;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -72,19 +121,25 @@ Your role is to predict crop yields and provide optimization recommendations for
 
 Provide realistic predictions based on Indian agricultural conditions and practical recommendations to maximize yield and profit.`;
 
+    // Sanitize text inputs for use in prompt
+    const sanitizeName = (str: string | undefined, maxLen: number) => 
+      str ? str.replace(/[^a-zA-Z\s\-]/g, '').slice(0, maxLen) : undefined;
+    const sanitizeText = (str: string | undefined, maxLen: number) => 
+      str ? str.replace(/[^a-zA-Z0-9\s,.\-\/]/g, '').slice(0, maxLen) : undefined;
+
     const userPrompt = `Predict the yield for the following farm and provide optimization recommendations:
 
 Farm Details:
-- Crop: ${cropType}
-- Variety: ${variety ?? 'Standard variety'}
+- Crop: ${sanitizeName(cropType, 50)}
+- Variety: ${sanitizeName(variety, 50) ?? 'Standard variety'}
 - Farm Size: ${farmSize} acres
-- Soil Type: ${soilType ?? 'Not specified'}
-- Irrigation: ${irrigationType ?? 'Not specified'}
-- Fertilizers Used: ${fertilizersUsed ?? 'Not specified'}
-- Sowing Date: ${sowingDate ?? 'Not specified'}
-- Location: ${location ?? 'Not specified'}
+- Soil Type: ${sanitizeName(soilType, 50) ?? 'Not specified'}
+- Irrigation: ${sanitizeName(irrigationType, 50) ?? 'Not specified'}
+- Fertilizers Used: ${sanitizeText(fertilizersUsed, 200) ?? 'Not specified'}
+- Sowing Date: ${sanitizeText(sowingDate, 30) ?? 'Not specified'}
+- Location: ${sanitizeText(location, 100) ?? 'Not specified'}
 - Previous Year Yield: ${previousYield ?? 'Not available'}
-- Weather Conditions: ${weatherConditions ?? 'Normal'}
+- Weather Conditions: ${sanitizeText(weatherConditions, 100) ?? 'Normal'}
 
 Provide yield prediction with confidence intervals and recommendations to improve yield.`;
 
