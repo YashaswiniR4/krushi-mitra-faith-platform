@@ -1,10 +1,47 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Validation schema for soil analysis
+const SoilRequestSchema = z.object({
+  ph: z.number()
+    .min(0, "pH cannot be negative")
+    .max(14, "pH cannot exceed 14")
+    .optional(),
+  nitrogen: z.number()
+    .min(0, "Nitrogen level cannot be negative")
+    .max(1000, "Nitrogen level exceeds reasonable range (max 1000 kg/ha)")
+    .optional(),
+  phosphorus: z.number()
+    .min(0, "Phosphorus level cannot be negative")
+    .max(500, "Phosphorus level exceeds reasonable range (max 500 kg/ha)")
+    .optional(),
+  potassium: z.number()
+    .min(0, "Potassium level cannot be negative")
+    .max(1000, "Potassium level exceeds reasonable range (max 1000 kg/ha)")
+    .optional(),
+  moisture: z.number()
+    .min(0, "Moisture cannot be negative")
+    .max(100, "Moisture cannot exceed 100%")
+    .optional(),
+  organicMatter: z.number()
+    .min(0, "Organic matter cannot be negative")
+    .max(100, "Organic matter cannot exceed 100%")
+    .optional(),
+  location: z.string()
+    .max(200, "Location must be less than 200 characters")
+    .regex(/^[a-zA-Z0-9\s,.\-]+$/, "Location contains invalid characters")
+    .optional(),
+  cropType: z.string()
+    .max(100, "Crop type must be less than 100 characters")
+    .regex(/^[a-zA-Z\s\-]+$/, "Crop type contains invalid characters")
+    .optional(),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -35,7 +72,19 @@ serve(async (req) => {
       );
     }
 
-    const { ph, nitrogen, phosphorus, potassium, moisture, organicMatter, location, cropType } = await req.json();
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = SoilRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+      return new Response(
+        JSON.stringify({ error: 'Validation failed', details: errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { ph, nitrogen, phosphorus, potassium, moisture, organicMatter, location, cropType } = validationResult.data;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -54,6 +103,10 @@ Your role is to analyze soil parameters and provide comprehensive recommendation
 
 Provide practical, cost-effective solutions suitable for small and medium Indian farmers.`;
 
+    // Sanitize text inputs for use in prompt
+    const sanitizedLocation = location ? location.replace(/[^a-zA-Z0-9\s,.\-]/g, '').slice(0, 100) : 'Not specified';
+    const sanitizedCropType = cropType ? cropType.replace(/[^a-zA-Z\s\-]/g, '').slice(0, 50) : 'General farming';
+
     const userPrompt = `Analyze the following soil parameters and provide recommendations:
 
 Soil Parameters:
@@ -63,8 +116,8 @@ Soil Parameters:
 - Potassium (K): ${potassium ?? 'Not provided'} kg/ha
 - Moisture Content: ${moisture ?? 'Not provided'}%
 - Organic Matter: ${organicMatter ?? 'Not provided'}%
-- Location/Region: ${location ?? 'Not specified'}
-- Intended Crop: ${cropType ?? 'General farming'}
+- Location/Region: ${sanitizedLocation}
+- Intended Crop: ${sanitizedCropType}
 
 Provide a comprehensive soil analysis with actionable recommendations.`;
 
