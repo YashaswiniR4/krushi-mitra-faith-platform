@@ -170,12 +170,40 @@ const MyListings = () => {
     });
   };
 
-  const deleteProduct = async (productId: string) => {
-    await supabase.from("products").delete().eq("id", productId);
-    setProducts(products.filter(p => p.id !== productId));
+  const deleteProductImages = async (images: string[]) => {
+    if (!images || images.length === 0) return;
+    
+    // Extract file paths from public URLs
+    const filePaths = images
+      .filter(url => url.includes('product-images'))
+      .map(url => {
+        // URL format: .../storage/v1/object/public/product-images/user-id/filename.ext
+        const match = url.match(/product-images\/(.+)$/);
+        return match ? match[1] : null;
+      })
+      .filter((path): path is string => path !== null);
+    
+    if (filePaths.length > 0) {
+      const { error } = await supabase.storage
+        .from('product-images')
+        .remove(filePaths);
+      
+      if (error) {
+        console.error('Error deleting images:', error);
+      }
+    }
+  };
+
+  const deleteProduct = async (product: Product) => {
+    // Delete images from storage first
+    await deleteProductImages(product.images);
+    
+    // Then delete the product record
+    await supabase.from("products").delete().eq("id", product.id);
+    setProducts(products.filter(p => p.id !== product.id));
     toast({
       title: "Deleted",
-      description: "Product has been removed.",
+      description: "Product and images have been removed.",
     });
   };
 
@@ -315,7 +343,7 @@ const MyListings = () => {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteProduct(product.id)}>
+                                <AlertDialogAction onClick={() => deleteProduct(product)}>
                                   Delete
                                 </AlertDialogAction>
                               </AlertDialogFooter>
