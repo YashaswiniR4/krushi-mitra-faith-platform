@@ -107,6 +107,7 @@ const SellProduct = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -117,6 +118,7 @@ const SellProduct = () => {
     location: "",
   });
   const [images, setImages] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -151,13 +153,54 @@ const SellProduct = () => {
     const files = e.target.files;
     if (!files) return;
 
-    // For now, create object URLs (in production, upload to storage)
-    const newImages = Array.from(files).map(file => URL.createObjectURL(file));
-    setImages(prev => [...prev, ...newImages].slice(0, 5));
+    const newFiles = Array.from(files);
+    const remainingSlots = 5 - images.length;
+    const filesToAdd = newFiles.slice(0, remainingSlots);
+    
+    // Create preview URLs and store files
+    const newPreviewUrls = filesToAdd.map(file => URL.createObjectURL(file));
+    setImages(prev => [...prev, ...newPreviewUrls]);
+    setImageFiles(prev => [...prev, ...filesToAdd]);
   };
 
   const removeImage = (index: number) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(images[index]);
     setImages(prev => prev.filter((_, i) => i !== index));
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImagesToStorage = async (): Promise<string[]> => {
+    if (!user || imageFiles.length === 0) return [];
+    
+    setUploading(true);
+    const uploadedUrls: string[] = [];
+    
+    try {
+      for (const file of imageFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, file);
+        
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+        
+        uploadedUrls.push(publicUrl);
+      }
+      
+      return uploadedUrls;
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,35 +226,45 @@ const SellProduct = () => {
 
     setLoading(true);
 
-    const { error } = await supabase.from("products").insert({
-      seller_id: user.id,
-      title: formData.title,
-      description: formData.description,
-      price: parseFloat(formData.price),
-      unit: formData.unit,
-      quantity_available: parseFloat(formData.quantity_available),
-      category_id: formData.category_id,
-      location: formData.location,
-      images: images,
-      status: "active",
-    });
+    try {
+      // Upload images to Supabase Storage
+      const uploadedImageUrls = await uploadImagesToStorage();
+      
+      const { error } = await supabase.from("products").insert({
+        seller_id: user.id,
+        title: formData.title,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        unit: formData.unit,
+        quantity_available: parseFloat(formData.quantity_available),
+        category_id: formData.category_id,
+        location: formData.location,
+        images: uploadedImageUrls,
+        status: "active",
+      });
 
-    setLoading(false);
+      if (error) {
+        throw error;
+      }
 
-    if (error) {
+      // Clean up preview URLs
+      images.forEach(url => URL.revokeObjectURL(url));
+
+      toast({
+        title: "Success",
+        description: "Your product has been listed successfully!",
+      });
+      navigate("/dashboard/marketplace");
+    } catch (error) {
+      console.error('Submit error:', error);
       toast({
         title: "Error",
         description: "Failed to list product. Please try again.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    toast({
-      title: "Success",
-      description: "Your product has been listed successfully!",
-    });
-    navigate("/dashboard/marketplace");
   };
 
   return (
@@ -382,8 +435,8 @@ const SellProduct = () => {
                   />
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Listing Product..." : "List Product"}
+                <Button type="submit" className="w-full" disabled={loading || uploading}>
+                  {uploading ? "Uploading Images..." : loading ? "Listing Product..." : "List Product"}
                 </Button>
               </form>
             </CardContent>
