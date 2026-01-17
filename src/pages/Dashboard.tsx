@@ -26,12 +26,14 @@ import {
   ChevronRight,
   Leaf,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  ShieldCheck
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 
-const DashboardSidebar = ({ isOpen, onClose, onSignOut }: { isOpen: boolean; onClose: () => void; onSignOut: () => void }) => {
+const DashboardSidebar = ({ isOpen, onClose, onSignOut, isAdmin }: { isOpen: boolean; onClose: () => void; onSignOut: () => void; isAdmin: boolean }) => {
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard", active: true },
     { icon: Camera, label: "Scan Crop", path: "/dashboard/scan" },
@@ -82,6 +84,17 @@ const DashboardSidebar = ({ isOpen, onClose, onSignOut }: { isOpen: boolean; onC
                 <span className="font-medium">{item.label}</span>
               </Link>
             ))}
+            
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={onClose}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 mt-4"
+              >
+                <ShieldCheck className="w-5 h-5" />
+                <span className="font-medium">Admin Panel</span>
+              </Link>
+            )}
           </nav>
 
           {/* Logout */}
@@ -105,6 +118,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
 
   const notifications = [
     { id: 1, title: "Crop scan completed", message: "Your wheat field scan is ready", time: "2 min ago" },
@@ -138,7 +152,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-muted">
-      <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onSignOut={handleSignOut} />
+      <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onSignOut={handleSignOut} isAdmin={isAdmin} />
 
       {/* Main Content */}
       <div className="lg:ml-72">
@@ -209,6 +223,12 @@ const Dashboard = () => {
                     <FileText className="w-4 h-4 mr-2" />
                     My Reports
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer text-red-600">
+                      <ShieldCheck className="w-4 h-4 mr-2" />
+                      Admin Panel
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
