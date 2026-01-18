@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { 
@@ -11,12 +10,14 @@ import {
   Package, 
   ShoppingCart, 
   LayoutDashboard,
-  ArrowLeft 
+  ArrowLeft,
+  ClipboardList
 } from "lucide-react";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminOrders from "@/components/admin/AdminOrders";
 import AdminUsers from "@/components/admin/AdminUsers";
 import AdminOverview from "@/components/admin/AdminOverview";
+import AdminAuditLogs from "@/components/admin/AdminAuditLogs";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -41,7 +42,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+          <TabsList className="grid grid-cols-5 w-full max-w-3xl">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -57,6 +58,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Audit Logs</span>
             </TabsTrigger>
           </TabsList>
 
@@ -74,6 +79,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="users">
             <AdminUsers />
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <AdminAuditLogs />
           </TabsContent>
         </Tabs>
       </main>

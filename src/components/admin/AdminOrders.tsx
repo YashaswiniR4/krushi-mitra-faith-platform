@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import {
   Table,
   TableBody,
@@ -53,6 +54,7 @@ const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
+  const { logAction } = useAuditLog();
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -84,6 +86,9 @@ const AdminOrders = () => {
   }, [statusFilter]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    const order = orders.find(o => o.id === orderId);
+    const oldStatus = order?.status;
+
     const { error } = await supabase
       .from("orders")
       .update({ status: newStatus, updated_at: new Date().toISOString() })
@@ -96,6 +101,15 @@ const AdminOrders = () => {
         variant: "destructive",
       });
     } else {
+      await logAction({
+        action: "update_status",
+        entity_type: "order",
+        entity_id: orderId,
+        old_value: { status: oldStatus },
+        new_value: { status: newStatus },
+        details: `Changed order ${orderId.slice(0, 8)} status from ${oldStatus} to ${newStatus}`,
+      });
+
       toast({
         title: "Updated",
         description: "Order status updated successfully",
@@ -105,6 +119,8 @@ const AdminOrders = () => {
   };
 
   const deleteOrder = async (orderId: string) => {
+    const order = orders.find(o => o.id === orderId);
+
     const { error } = await supabase.from("orders").delete().eq("id", orderId);
 
     if (error) {
@@ -114,6 +130,14 @@ const AdminOrders = () => {
         variant: "destructive",
       });
     } else {
+      await logAction({
+        action: "delete_order",
+        entity_type: "order",
+        entity_id: orderId,
+        old_value: { status: order?.status, total_price: order?.total_price },
+        details: `Deleted order ${orderId.slice(0, 8)} (₹${order?.total_price})`,
+      });
+
       toast({
         title: "Deleted",
         description: "Order deleted successfully",
