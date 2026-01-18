@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import {
   Table,
   TableBody,
@@ -22,7 +23,6 @@ import {
 } from "@/components/ui/select";
 import { Search, UserCog, Shield, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
 
 interface Profile {
   id: string;
@@ -46,6 +46,7 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const { logAction } = useAuditLog();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -81,9 +82,10 @@ const AdminUsers = () => {
   const updateUserRole = async (userId: string, newRole: string) => {
     const existingRole = userRoles.get(userId);
     const roleValue = newRole as "admin" | "moderator" | "user";
+    const profile = profiles.find(p => p.user_id === userId);
+    const userName = profile?.full_name || "Unknown User";
 
     if (existingRole) {
-      // Update existing role
       const { error } = await supabase
         .from("user_roles")
         .update({ role: roleValue })
@@ -97,8 +99,16 @@ const AdminUsers = () => {
         });
         return;
       }
+
+      await logAction({
+        action: "update_role",
+        entity_type: "user_role",
+        entity_id: userId,
+        old_value: { role: existingRole },
+        new_value: { role: newRole },
+        details: `Changed ${userName}'s role from ${existingRole} to ${newRole}`,
+      });
     } else {
-      // Insert new role
       const { error } = await supabase
         .from("user_roles")
         .insert([{ user_id: userId, role: roleValue }]);
@@ -111,6 +121,14 @@ const AdminUsers = () => {
         });
         return;
       }
+
+      await logAction({
+        action: "assign_role",
+        entity_type: "user_role",
+        entity_id: userId,
+        new_value: { role: newRole },
+        details: `Assigned ${newRole} role to ${userName}`,
+      });
     }
 
     toast({
@@ -121,6 +139,10 @@ const AdminUsers = () => {
   };
 
   const removeUserRole = async (userId: string) => {
+    const existingRole = userRoles.get(userId);
+    const profile = profiles.find(p => p.user_id === userId);
+    const userName = profile?.full_name || "Unknown User";
+
     const { error } = await supabase
       .from("user_roles")
       .delete()
@@ -133,6 +155,14 @@ const AdminUsers = () => {
         variant: "destructive",
       });
     } else {
+      await logAction({
+        action: "remove_role",
+        entity_type: "user_role",
+        entity_id: userId,
+        old_value: { role: existingRole },
+        details: `Removed ${existingRole} role from ${userName}`,
+      });
+
       toast({
         title: "Removed",
         description: "User role removed",

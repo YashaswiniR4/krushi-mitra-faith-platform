@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import {
   Table,
   TableBody,
@@ -31,7 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Search, Trash2, Eye, Edit } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Product {
@@ -51,6 +52,7 @@ const AdminProducts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
+  const { logAction } = useAuditLog();
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -82,6 +84,9 @@ const AdminProducts = () => {
   }, [statusFilter]);
 
   const updateProductStatus = async (productId: string, newStatus: string) => {
+    const product = products.find(p => p.id === productId);
+    const oldStatus = product?.status;
+
     const { error } = await supabase
       .from("products")
       .update({ status: newStatus })
@@ -94,6 +99,15 @@ const AdminProducts = () => {
         variant: "destructive",
       });
     } else {
+      await logAction({
+        action: "update_status",
+        entity_type: "product",
+        entity_id: productId,
+        old_value: { status: oldStatus },
+        new_value: { status: newStatus },
+        details: `Changed "${product?.title}" status from ${oldStatus} to ${newStatus}`,
+      });
+
       toast({
         title: "Updated",
         description: "Product status updated successfully",
@@ -127,6 +141,14 @@ const AdminProducts = () => {
         variant: "destructive",
       });
     } else {
+      await logAction({
+        action: "delete_product",
+        entity_type: "product",
+        entity_id: product.id,
+        old_value: { title: product.title, price: product.price, status: product.status },
+        details: `Deleted product "${product.title}"`,
+      });
+
       toast({
         title: "Deleted",
         description: "Product deleted successfully",
