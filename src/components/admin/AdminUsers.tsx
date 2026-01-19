@@ -189,6 +189,13 @@ const AdminUsers = () => {
             Admin
           </Badge>
         );
+      case "field_officer":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
+            <Shield className="h-3 w-3" />
+            Field Officer
+          </Badge>
+        );
       case "moderator":
         return (
           <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1">
@@ -282,6 +289,7 @@ const AdminUsers = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="field_officer">Field Officer</SelectItem>
                             <SelectItem value="moderator">Moderator</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>

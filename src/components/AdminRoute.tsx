@@ -9,7 +9,7 @@ interface AdminRouteProps {
 
 const AdminRoute = ({ children }: AdminRouteProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isFieldOfficer, loading: roleLoading } = useUserRole();
 
   if (authLoading || roleLoading) {
     return (
@@ -23,7 +23,8 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAdmin) {
+  // Allow both admins and field officers to access admin routes
+  if (!isAdmin && !isFieldOfficer) {
     return <Navigate to="/dashboard" replace />;
   }
 

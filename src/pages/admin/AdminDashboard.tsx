@@ -4,6 +4,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { useUserRole } from "@/hooks/useUserRole";
 import { 
   ShieldCheck, 
   Users, 
@@ -11,7 +12,8 @@ import {
   ShoppingCart, 
   LayoutDashboard,
   ArrowLeft,
-  ClipboardList
+  ClipboardList,
+  UserCheck
 } from "lucide-react";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminOrders from "@/components/admin/AdminOrders";
@@ -21,6 +23,9 @@ import AdminAuditLogs from "@/components/admin/AdminAuditLogs";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const { isAdmin, role } = useUserRole();
+
+  const isFieldOfficer = role === "field_officer";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -33,16 +38,26 @@ const AdminDashboard = () => {
             </Link>
           </Button>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-8 w-8 text-primary" />
+            {isFieldOfficer ? (
+              <UserCheck className="h-8 w-8 text-primary" />
+            ) : (
+              <ShieldCheck className="h-8 w-8 text-primary" />
+            )}
             <div>
-              <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-              <p className="text-muted-foreground">Manage products, orders, and users</p>
+              <h1 className="text-3xl font-bold">
+                {isFieldOfficer ? "Field Officer Panel" : "Admin Dashboard"}
+              </h1>
+              <p className="text-muted-foreground">
+                {isFieldOfficer 
+                  ? "Review and approve products" 
+                  : "Manage products, orders, and users"}
+              </p>
             </div>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+          <TabsList className={`grid w-full max-w-3xl ${isAdmin ? 'grid-cols-5' : 'grid-cols-3'}`}>
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -51,14 +66,18 @@ const AdminDashboard = () => {
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Products</span>
             </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              <span className="hidden sm:inline">Orders</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Users</span>
-            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="orders" className="flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                <span className="hidden sm:inline">Orders</span>
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">Users</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="audit" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
               <span className="hidden sm:inline">Audit Logs</span>
@@ -70,16 +89,20 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="products">
-            <AdminProducts />
+            <AdminProducts isFieldOfficer={isFieldOfficer} />
           </TabsContent>
 
-          <TabsContent value="orders">
-            <AdminOrders />
-          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="orders">
+              <AdminOrders />
+            </TabsContent>
+          )}
 
-          <TabsContent value="users">
-            <AdminUsers />
-          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="users">
+              <AdminUsers />
+            </TabsContent>
+          )}
 
           <TabsContent value="audit">
             <AdminAuditLogs />
