@@ -46,7 +46,11 @@ interface Product {
   images: string[];
 }
 
-const AdminProducts = () => {
+interface AdminProductsProps {
+  isFieldOfficer?: boolean;
+}
+
+const AdminProducts = ({ isFieldOfficer = false }: AdminProductsProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -267,27 +271,29 @@ const AdminProducts = () => {
                             <SelectItem value="inactive">Inactive</SelectItem>
                           </SelectContent>
                         </Select>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon" className="h-8 w-8">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Product?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete "{product.title}" and its images.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteProduct(product)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        {!isFieldOfficer && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="icon" className="h-8 w-8">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Product?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete "{product.title}" and its images.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteProduct(product)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

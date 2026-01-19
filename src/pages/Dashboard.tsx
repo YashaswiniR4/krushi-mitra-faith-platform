@@ -33,7 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 
-const DashboardSidebar = ({ isOpen, onClose, onSignOut, isAdmin }: { isOpen: boolean; onClose: () => void; onSignOut: () => void; isAdmin: boolean }) => {
+const DashboardSidebar = ({ isOpen, onClose, onSignOut, isAdmin, isFieldOfficer }: { isOpen: boolean; onClose: () => void; onSignOut: () => void; isAdmin: boolean; isFieldOfficer: boolean }) => {
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard", active: true },
     { icon: Camera, label: "Scan Crop", path: "/dashboard/scan" },
@@ -85,14 +85,18 @@ const DashboardSidebar = ({ isOpen, onClose, onSignOut, isAdmin }: { isOpen: boo
               </Link>
             ))}
             
-            {isAdmin && (
+            {(isAdmin || isFieldOfficer) && (
               <Link
                 to="/admin"
                 onClick={onClose}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 mt-4"
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg mt-4 ${
+                  isAdmin 
+                    ? 'text-red-600 bg-red-50 hover:bg-red-100' 
+                    : 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                }`}
               >
                 <ShieldCheck className="w-5 h-5" />
-                <span className="font-medium">Admin Panel</span>
+                <span className="font-medium">{isAdmin ? 'Admin Panel' : 'Field Officer Panel'}</span>
               </Link>
             )}
           </nav>
@@ -118,7 +122,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile, signOut } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isFieldOfficer, role } = useUserRole();
 
   const notifications = [
     { id: 1, title: "Crop scan completed", message: "Your wheat field scan is ready", time: "2 min ago" },
@@ -152,7 +156,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-muted">
-      <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onSignOut={handleSignOut} isAdmin={isAdmin} />
+      <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onSignOut={handleSignOut} isAdmin={isAdmin} isFieldOfficer={role === "field_officer"} />
 
       {/* Main Content */}
       <div className="lg:ml-72">
@@ -223,10 +227,10 @@ const Dashboard = () => {
                     <FileText className="w-4 h-4 mr-2" />
                     My Reports
                   </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer text-red-600">
+                  {(isAdmin || role === "field_officer") && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")} className={`cursor-pointer ${isAdmin ? 'text-red-600' : 'text-blue-600'}`}>
                       <ShieldCheck className="w-4 h-4 mr-2" />
-                      Admin Panel
+                      {isAdmin ? 'Admin Panel' : 'Field Officer Panel'}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
