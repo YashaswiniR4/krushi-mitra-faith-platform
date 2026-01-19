@@ -49,7 +49,7 @@ const AdminDashboard = () => {
               </h1>
               <p className="text-muted-foreground">
                 {isFieldOfficer 
-                  ? "Review and approve products" 
+                  ? "Review products and monitor orders" 
                   : "Manage products, orders, and users"}
               </p>
             </div>
@@ -57,7 +57,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full max-w-3xl ${isAdmin ? 'grid-cols-5' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full max-w-3xl ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -66,12 +66,10 @@ const AdminDashboard = () => {
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Products</span>
             </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="orders" className="flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                <span className="hidden sm:inline">Orders</span>
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">Orders</span>
+            </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -85,18 +83,16 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="overview">
-            <AdminOverview />
+            <AdminOverview isFieldOfficer={isFieldOfficer} />
           </TabsContent>
 
           <TabsContent value="products">
             <AdminProducts isFieldOfficer={isFieldOfficer} />
           </TabsContent>
 
-          {isAdmin && (
-            <TabsContent value="orders">
-              <AdminOrders />
-            </TabsContent>
-          )}
+          <TabsContent value="orders">
+            <AdminOrders readOnly={isFieldOfficer} />
+          </TabsContent>
 
           {isAdmin && (
             <TabsContent value="users">

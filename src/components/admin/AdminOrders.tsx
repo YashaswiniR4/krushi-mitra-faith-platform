@@ -48,7 +48,11 @@ interface Order {
   created_at: string;
 }
 
-const AdminOrders = () => {
+interface AdminOrdersProps {
+  readOnly?: boolean;
+}
+
+const AdminOrders = ({ readOnly = false }: AdminOrdersProps) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -189,7 +193,7 @@ const AdminOrders = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Orders Management</CardTitle>
+        <CardTitle>{readOnly ? "Orders Overview" : "Orders Management"}</CardTitle>
         <div className="flex flex-col sm:flex-row gap-4 mt-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -228,7 +232,7 @@ const AdminOrders = () => {
                   <TableHead>Quantity</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  {!readOnly && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -243,46 +247,48 @@ const AdminOrders = () => {
                     <TableCell>{order.quantity}</TableCell>
                     <TableCell>₹{order.total_price}</TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={order.status}
-                          onValueChange={(value) => updateOrderStatus(order.id, value)}
-                        >
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="shipped">Shipped</SelectItem>
-                            <SelectItem value="delivered">Delivered</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon" className="h-8 w-8">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Order?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete this order.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteOrder(order.id)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={order.status}
+                            onValueChange={(value) => updateOrderStatus(order.id, value)}
+                          >
+                            <SelectTrigger className="w-32 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="confirmed">Confirmed</SelectItem>
+                              <SelectItem value="shipped">Shipped</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="icon" className="h-8 w-8">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Order?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete this order.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteOrder(order.id)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
