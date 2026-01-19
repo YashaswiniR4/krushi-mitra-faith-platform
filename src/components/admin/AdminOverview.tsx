@@ -13,7 +13,11 @@ interface Stats {
   activeProducts: number;
 }
 
-const AdminOverview = () => {
+interface AdminOverviewProps {
+  isFieldOfficer?: boolean;
+}
+
+const AdminOverview = ({ isFieldOfficer = false }: AdminOverviewProps) => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -66,7 +70,7 @@ const AdminOverview = () => {
     );
   }
 
-  const statCards = [
+  const adminStatCards = [
     {
       title: "Total Users",
       value: stats?.totalUsers || 0,
@@ -111,6 +115,39 @@ const AdminOverview = () => {
     },
   ];
 
+  const fieldOfficerStatCards = [
+    {
+      title: "Total Products",
+      value: stats?.totalProducts || 0,
+      icon: Package,
+      color: "text-green-600",
+      bgColor: "bg-green-100",
+    },
+    {
+      title: "Active Products",
+      value: stats?.activeProducts || 0,
+      icon: TrendingUp,
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-100",
+    },
+    {
+      title: "Pending Orders",
+      value: stats?.pendingOrders || 0,
+      icon: AlertCircle,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100",
+    },
+    {
+      title: "Total Orders",
+      value: stats?.totalOrders || 0,
+      icon: ShoppingCart,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+    },
+  ];
+
+  const statCards = isFieldOfficer ? fieldOfficerStatCards : adminStatCards;
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -136,13 +173,27 @@ const AdminOverview = () => {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground">
-          <p>Use the tabs above to manage products, orders, and users. As an admin, you have full access to:</p>
-          <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>View and manage all products across the platform</li>
-            <li>Update order statuses and handle customer issues</li>
-            <li>Manage user accounts and assign roles</li>
-            <li>Add and edit product categories</li>
-          </ul>
+          {isFieldOfficer ? (
+            <>
+              <p>As a Field Officer, you can:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Review and approve/reject product listings</li>
+                <li>View order status and track deliveries</li>
+                <li>Monitor marketplace activity</li>
+                <li>Access audit logs for your actions</li>
+              </ul>
+            </>
+          ) : (
+            <>
+              <p>Use the tabs above to manage products, orders, and users. As an admin, you have full access to:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>View and manage all products across the platform</li>
+                <li>Update order statuses and handle customer issues</li>
+                <li>Manage user accounts and assign roles</li>
+                <li>Add and edit product categories</li>
+              </ul>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
